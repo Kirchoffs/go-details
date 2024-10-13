@@ -39,7 +39,7 @@ func TestGobBasicEncodingAndDecoding(t *testing.T) {
     t.Log("Decoded Person:", decodedPerson)
 }
 
-func TestGobEncodeValue(t *testing.T) {
+func TestGobEncodeMap(t *testing.T) {
     var buffer bytes.Buffer
 
     encoder := gob.NewEncoder(&buffer)
@@ -96,4 +96,140 @@ func TestGobWithIOWriterAndReader(t *testing.T) {
 
     t.Log("Original Person:", person)
     t.Log("Decoded Person:", decodedPerson)
+}
+
+func TestGobEncodeStruct(t *testing.T) {
+    gob.Register(Person{})
+
+    var buffer bytes.Buffer
+    encoder := gob.NewEncoder(&buffer)
+    decoder := gob.NewDecoder(&buffer)
+
+    original := Person{Name: "Alice", Age: 30}
+    if err := encoder.Encode(original); err != nil {
+        fmt.Println("Error encoding:", err)
+        return
+    }
+
+    var decoded Person
+    if err := decoder.Decode(&decoded); err != nil {
+        fmt.Println("Error decoding:", err)
+        return
+    }
+
+    fmt.Printf("Decoded data: %+v\n", decoded)
+}
+
+func TestGobEncodeMultipleObject(t *testing.T) {
+    gob.Register(Person{})
+
+    var buffer bytes.Buffer
+    encoder := gob.NewEncoder(&buffer)
+    decoder := gob.NewDecoder(&buffer)
+
+    original1 := Person{Name: "Alice", Age: 31}
+    original2 := Person{Name: "Bob", Age: 32}
+
+    if err := encoder.Encode(original1); err != nil {
+        fmt.Println("Error encoding:", err)
+        return
+    }
+
+    if err := encoder.Encode(original2); err != nil {
+        fmt.Println("Error encoding:", err)
+        return
+    }
+
+    var decoded1 Person
+    if err := decoder.Decode(&decoded1); err != nil {
+        fmt.Println("Error decoding:", err)
+        return
+    }
+
+    var decoded2 Person
+    if err := decoder.Decode(&decoded2); err != nil {
+        fmt.Println("Error decoding:", err)
+        return
+    }
+
+    fmt.Printf("Decoded data 1: %+v\n", decoded1)
+    fmt.Printf("Decoded data 2: %+v\n", decoded2)
+}
+
+type Employee struct {
+    Name   string
+    salary int
+}
+
+func TestGobEncodeUnexportedField(t *testing.T) {
+    gob.Register(Employee{})
+
+    var buffer bytes.Buffer
+    encoder := gob.NewEncoder(&buffer)
+    decoder := gob.NewDecoder(&buffer)
+
+    original := Employee{Name: "Alice", salary: 6174}
+    if err := encoder.Encode(original); err != nil {
+        fmt.Println("Error encoding:", err)
+        return
+    }
+
+    var decoded Employee
+    if err := decoder.Decode(&decoded); err != nil {
+        fmt.Println("Error decoding:", err)
+        return
+    }
+
+    fmt.Printf("Decoded data: %+v\n", decoded)
+    if decoded.salary != 0 {
+        t.Error("Unexported field should not be encoded")
+    }
+}
+
+func TestGobWithSpecialCase(t *testing.T) {
+    gob.Register(Person{})
+
+    var buffer bytes.Buffer
+    encoder := gob.NewEncoder(&buffer)
+    decoder := gob.NewDecoder(&buffer)
+
+    // decoded has non-default value
+    // original has non-default value
+    // decoded should be overwritten
+    original := Person{Name: "Alice", Age: 30}
+    if err := encoder.EncodeValue(reflect.ValueOf(original)); err != nil {
+        fmt.Println("Error encoding:", err)
+        return
+    }
+
+    var decoded Person
+    decoded.Name = "Bob"
+    if err := decoder.Decode(&decoded); err != nil {
+        fmt.Println("Error decoding:", err)
+        return
+    }
+
+    fmt.Printf("Decoded data: %+v\n", decoded)
+    if decoded.Name != "Alice" {
+        t.Error("Decoded data should not be overwritten")
+    }
+
+    // decoded has non-default value
+    // original has default value
+    // decoded should not be overwritten
+    original.Name = ""
+    if err := encoder.EncodeValue(reflect.ValueOf(original)); err != nil {
+        fmt.Println("Error encoding:", err)
+        return
+    }
+
+    decoded.Name = "Bob"
+    if err := decoder.Decode(&decoded); err != nil {
+        fmt.Println("Error decoding:", err)
+        return
+    }
+
+    if decoded.Name != "Bob" {
+        t.Error("Decoded data should be overwritten")
+    }
 }
