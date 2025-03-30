@@ -39,4 +39,7 @@ func TestDuckTyping(t *testing.T) {
     makeItQuack(duck)
     makeItQuack(woodenDuck)
     makeItQuack(&pointerDuck)
+
+    woodenQuacker := Quacker(woodenDuck)
+    woodenQuacker.Quack()
 }
